@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -45,7 +46,6 @@ def disagreement_components(
     fp_margin = fp_top2[:, 0] - fp_top2[:, 1]
     q_margin = q_top2[:, 0] - q_top2[:, 1]
 
-    # The score uses one-sided degradation terms.
     conf_gap = torch.clamp(fp_conf - q_conf, min=0.0)
     margin_gap = torch.clamp(fp_margin - q_margin, min=0.0)
 
@@ -86,23 +86,44 @@ def disagreement_score(
 
 
 def severity_score(
+    fp_logits: torch.Tensor,
+    q_logits: torch.Tensor,
     components: DisagreementComponents,
     reference_percentile: float = 90.0,
 ) -> tuple[float, float, float]:
-    """Return continuous severity and its confidence/KL reference scales.
+    """Return the exact continuous severity used by the reproduction path.
 
-    The confidence numerator is the mean one-sided degradation used by ARCS.
-    Its reference denominator intentionally uses the percentile of the absolute
-    FP-vs-proxy confidence difference, matching the paper implementation.
+    The score/severity numerator uses the one-sided confidence degradation,
+    while the automatic confidence reference intentionally uses the absolute
+    FP-vs-proxy confidence difference. The automatic reference computation
+    follows the original reproduction implementation, including NumPy
+    percentile evaluation and the 1e-12 probability floor for its KL term.
     """
-    q = float(reference_percentile) / 100.0
+    with torch.no_grad():
+        fp_prob = F.softmax(fp_logits.float(), dim=1)
+        q_prob = F.softmax(q_logits.float(), dim=1)
 
-    abs_conf_gap = torch.abs(components.fp_conf - components.q_conf)
-    conf_ref = float(torch.quantile(abs_conf_gap, q).item())
-    kl_ref = float(torch.quantile(components.kl_fp_q, q).item())
+        fp_conf = fp_prob.max(dim=1).values
+        q_conf = q_prob.max(dim=1).values
+        conf_reference_values = torch.abs(fp_conf - q_conf).cpu().numpy()
 
-    conf_ref = max(conf_ref, _EPS)
-    kl_ref = max(kl_ref, _EPS)
+        kl_reference_values = torch.sum(
+            fp_prob
+            * (
+                torch.log(fp_prob.clamp_min(1.0e-12))
+                - torch.log(q_prob.clamp_min(1.0e-12))
+            ),
+            dim=1,
+        ).cpu().numpy()
+
+    conf_ref = max(
+        float(np.percentile(conf_reference_values, reference_percentile)),
+        _EPS,
+    )
+    kl_ref = max(
+        float(np.percentile(kl_reference_values, reference_percentile)),
+        _EPS,
+    )
 
     mean_conf_degradation = float(components.conf_gap.mean().item())
     mean_kl = float(components.kl_fp_q.mean().item())
@@ -111,5 +132,5 @@ def severity_score(
         0.5 * mean_conf_degradation / conf_ref
         + 0.5 * mean_kl / kl_ref
     )
-    severity = max(0.0, min(1.0, severity))
+    severity = float(np.clip(severity, 0.0, 1.0))
     return severity, conf_ref, kl_ref
