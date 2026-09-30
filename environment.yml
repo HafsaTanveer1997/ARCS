@@ -1,0 +1,19 @@
+name: arcs
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+      - torch==2.8.0
+      - torchvision==0.23.0
+      - numpy==1.26.4
+      - pandas==2.3.3
+      - scikit-learn==1.6.1
+      - matplotlib==3.9.4
+      - tqdm==4.67.3
+      - timm
