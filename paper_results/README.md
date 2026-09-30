@@ -5,6 +5,7 @@ This directory contains compact aggregate values reported in the submitted manus
 Files currently included:
 
 - `deit_budget.csv`: DeiT-S results across four bit-width settings, four calibration budgets, and the four selection methods.
+- `imagenet_cnn.csv`: ImageNet CNN results across four architectures, four bit-width settings, and the four selection methods.
 - `class_skew_deit_w8a4_n128.csv`: 80/20 class-skew candidate-pool experiment.
 - `ablation_deit_n128.csv`: representative/reliability selection ablations reported for W4A4 and W8A4.
 - `ece_binning_resnet18_seed1005.csv`: ECE sensitivity to 10, 15, 20, and 30 equal-width bins.
