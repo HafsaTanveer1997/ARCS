@@ -1,0 +1,28 @@
+dataset: imagenet
+
+model: deit_small_patch16_224
+
+bitwidths:
+  - [4, 4]
+  - [4, 8]
+  - [8, 4]
+  - [8, 8]
+
+methods:
+  - random
+  - confgap
+  - selectq
+  - arcs
+
+calibration:
+  candidate_pool: 4096
+  budgets: [128, 256, 512, 1024]
+  temperature_scaling_size: 4096
+  proxy_calibration_size: 128
+  proxy_calibration_batch_size: 32
+  trusted_prediction_threshold: 0.70
+
+seeds:
+  - 1005
+  - 1006
+  - 1007
