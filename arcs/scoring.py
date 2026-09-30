@@ -20,6 +20,8 @@ def zscore(values: torch.Tensor) -> torch.Tensor:
 
 @dataclass
 class DisagreementComponents:
+    fp_probs: torch.Tensor
+    q_probs: torch.Tensor
     fp_conf: torch.Tensor
     q_conf: torch.Tensor
     fp_margin: torch.Tensor
@@ -46,6 +48,7 @@ def disagreement_components(
     fp_margin = fp_top2[:, 0] - fp_top2[:, 1]
     q_margin = q_top2[:, 0] - q_top2[:, 1]
 
+    # One-sided degradation signals used by the selector score and severity.
     conf_gap = torch.clamp(fp_conf - q_conf, min=0.0)
     margin_gap = torch.clamp(fp_margin - q_margin, min=0.0)
 
@@ -60,6 +63,8 @@ def disagreement_components(
     flip = (fp_pred != q_pred).float()
 
     return DisagreementComponents(
+        fp_probs=fp_probs,
+        q_probs=q_probs,
         fp_conf=fp_conf,
         q_conf=q_conf,
         fp_margin=fp_margin,
@@ -86,35 +91,29 @@ def disagreement_score(
 
 
 def severity_score(
-    fp_logits: torch.Tensor,
-    q_logits: torch.Tensor,
     components: DisagreementComponents,
     reference_percentile: float = 90.0,
 ) -> tuple[float, float, float]:
     """Return the exact continuous severity used by the reproduction path.
 
-    The score/severity numerator uses the one-sided confidence degradation,
-    while the automatic confidence reference intentionally uses the absolute
-    FP-vs-proxy confidence difference. The automatic reference computation
-    follows the original reproduction implementation, including NumPy
-    percentile evaluation and the 1e-12 probability floor for its KL term.
+    The numerator uses the one-sided confidence degradation. The automatic
+    confidence reference intentionally uses the absolute FP-vs-proxy
+    confidence difference. Automatic references follow the original
+    implementation's NumPy percentile calculation and 1e-12 probability
+    floor for the reference KL computation.
     """
-    with torch.no_grad():
-        fp_prob = F.softmax(fp_logits.float(), dim=1)
-        q_prob = F.softmax(q_logits.float(), dim=1)
+    conf_reference_values = torch.abs(
+        components.fp_conf - components.q_conf
+    ).detach().cpu().numpy()
 
-        fp_conf = fp_prob.max(dim=1).values
-        q_conf = q_prob.max(dim=1).values
-        conf_reference_values = torch.abs(fp_conf - q_conf).cpu().numpy()
-
-        kl_reference_values = torch.sum(
-            fp_prob
-            * (
-                torch.log(fp_prob.clamp_min(1.0e-12))
-                - torch.log(q_prob.clamp_min(1.0e-12))
-            ),
-            dim=1,
-        ).cpu().numpy()
+    kl_reference_values = torch.sum(
+        components.fp_probs
+        * (
+            torch.log(components.fp_probs.clamp_min(1.0e-12))
+            - torch.log(components.q_probs.clamp_min(1.0e-12))
+        ),
+        dim=1,
+    ).detach().cpu().numpy()
 
     conf_ref = max(
         float(np.percentile(conf_reference_values, reference_percentile)),
