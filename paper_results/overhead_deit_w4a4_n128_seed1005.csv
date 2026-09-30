@@ -1,0 +1,5 @@
+method,time_hours,extra_vs_random,peak_gpu_memory_gb
+Random,0.262,0.0%,1.665
+ConfGap,0.269,+2.8%,1.884
+SelectQ,0.345,+31.8%,1.726
+ARCS,0.325,+24.3%,1.825
