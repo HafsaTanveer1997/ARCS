@@ -1,0 +1,30 @@
+dataset: imagenet
+
+models:
+  - resnet18
+  - resnet50
+  - mobilenetv2
+  - regnetx_600m
+
+bitwidths:
+  - [4, 4]
+  - [4, 8]
+  - [8, 4]
+  - [8, 8]
+
+methods:
+  - random
+  - confgap
+  - selectq
+  - arcs
+
+calibration:
+  candidate_pool: 4096
+  budget: 1024
+  temperature_scaling_size: 4096
+  trusted_prediction_threshold: 0.70
+
+seeds:
+  - 1005
+  - 1006
+  - 1007
