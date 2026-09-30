@@ -7,11 +7,7 @@ import numpy as np
 import torch
 
 from .herding import greedy_herding
-from .scoring import (
-    disagreement_components,
-    disagreement_score,
-    severity_score,
-)
+from .scoring import disagreement_components, disagreement_score, severity_score
 
 
 @dataclass
@@ -28,16 +24,7 @@ class ARCSSelectionResult:
 
 
 class ARCSSelector:
-    """Paper configuration of ARCS calibration-data selection.
-
-    Selection has three branches:
-      1. feature-space representative herding,
-      2. controlled FP-vs-proxy disagreement-band selection,
-      3. random samples from the remaining pool.
-
-    The representative/reliability mixture and the reliability percentile
-    band are continuously adapted using pool-level disagreement severity.
-    """
+    """Paper configuration of ARCS calibration-data selection."""
 
     def __init__(
         self,
@@ -109,7 +96,6 @@ class ARCSSelector:
         class_counts: dict[int, int] = {}
         selected: list[int] = []
 
-        # First pass enforces the class cap.
         for position in ordered_positions:
             predicted_class = int(fp_pred[position].item())
             if class_counts.get(predicted_class, 0) < self.class_cap:
@@ -118,7 +104,8 @@ class ARCSSelector:
             if len(selected) >= num_select:
                 return selected
 
-        # Relax the cap only if more samples are needed.
+        # If the cap prevents the branch from reaching its requested size,
+        # relax it and continue in descending-score order.
         selected_set = set(selected)
         for position in ordered_positions:
             if position not in selected_set:
@@ -172,11 +159,13 @@ class ARCSSelector:
             severity,
         )
 
-        # The paper uses nearest-integer branch sizes. The random branch gets
-        # the remaining target count so that the final budget is exact.
-        n_rep = int(round(rep_ratio * target))
-        n_rel = int(round(reliability_ratio * target))
-        n_rand = max(0, target - n_rep - n_rel)
+        # Nearest-integer branch sizes from the manuscript.
+        n_rep = max(1, int(round(rep_ratio * target)))
+        n_rel = max(0, int(round(reliability_ratio * target)))
+        n_rand = target - n_rep - n_rel
+        if n_rand < 0:
+            n_rand = 0
+            n_rel = max(0, target - n_rep)
 
         low_band = self._interpolate(
             self.low_severity_band[0], self.high_severity_band[0], severity
@@ -185,12 +174,13 @@ class ARCSSelector:
             self.low_severity_band[1], self.high_severity_band[1], severity
         )
 
-        # 1. Representative branch.
+        # 1. Representative branch via greedy herding on L2-normalized features.
         rep_positions = greedy_herding(embeddings, n_rep)
         selected = list(rep_positions)
         selected_set = set(selected)
 
-        # 2. Reliability branch is computed on the remaining pool.
+        # 2. Reliability branch. Percentiles are computed after representative
+        # samples are removed, exactly as described in the paper.
         remaining_positions = [
             position for position in range(pool_size)
             if position not in selected_set
@@ -207,7 +197,7 @@ class ARCSSelector:
                 high_percentile=high_band,
             )
 
-            # Explicit fallback used by the paper implementation.
+            # Empty-band fallback: use the complete remaining pool.
             if not local_band:
                 local_band = list(range(len(remaining_positions)))
 
@@ -222,7 +212,7 @@ class ARCSSelector:
         selected.extend(rel_positions)
         selected_set.update(rel_positions)
 
-        # 3. Random branch from the remaining pool, without replacement.
+        # 3. Diversity branch: uniform random sampling without replacement.
         remaining_positions = [
             position for position in range(pool_size)
             if position not in selected_set
@@ -242,28 +232,6 @@ class ARCSSelector:
             rand_positions = []
 
         selected.extend(rand_positions)
-        selected_set.update(rand_positions)
-
-        # Safety fill only matters if the reliability band itself contained
-        # fewer points than requested. It preserves uniqueness and the budget.
-        if len(selected) < target:
-            remaining_positions = [
-                position for position in range(pool_size)
-                if position not in selected_set
-            ]
-            fill_count = min(target - len(selected), len(remaining_positions))
-            if fill_count > 0:
-                fill_positions = [
-                    int(position)
-                    for position in rng.choice(
-                        np.asarray(remaining_positions, dtype=np.int64),
-                        size=fill_count,
-                        replace=False,
-                    ).tolist()
-                ]
-                rand_positions.extend(fill_positions)
-                selected.extend(fill_positions)
-
         selected = selected[:target]
         selected_dataset_indices = [dataset_indices[p] for p in selected]
 
