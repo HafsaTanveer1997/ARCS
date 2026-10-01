@@ -132,7 +132,7 @@ def select_calibration_subset(args, model, dataset, wq_params, aq_params):
     if args.method == "random":
         return select_random(candidate_indices, args.budget, args.seed), {
             "candidate_pool_size": len(candidate_indices),
-            "selection_seed": args.seed + 1,
+            "selection_seed": args.seed,
         }
 
     if args.method == "selectq":
