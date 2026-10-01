@@ -41,3 +41,13 @@ bash scripts/run_single/run_imagenet_single.sh arcs deit_small_patch16_224 8 4 1
 `METHOD` can be `random`, `confgap`, `selectq`, or `arcs`.
 
 The main ARCS settings are in `configs/arcs.yaml`.
+
+## Poisoning stress test
+
+The candidate-pool construction used for the poisoning stress test is in:
+
+```text
+scripts/poisoning.py
+```
+
+It builds the 1%, 5%, and 10% contaminated pools from the clean and transformed candidate scores used by the attack.
