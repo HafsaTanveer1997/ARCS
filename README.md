@@ -40,7 +40,7 @@ bash scripts/run_single/run_imagenet_single.sh arcs deit_small_patch16_224 8 4 1
 
 `METHOD` can be `random`, `confgap`, `selectq`, or `arcs`.
 
-The main ARCS settings are in `configs/arcs.yaml`.
+The default ARCS settings are listed in `configs/arcs.yaml`.
 
 ## Poisoning stress test
 
