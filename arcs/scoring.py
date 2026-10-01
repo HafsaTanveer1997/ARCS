@@ -11,7 +11,6 @@ _EPS = 1.0e-8
 
 
 def zscore(values: torch.Tensor) -> torch.Tensor:
-    """Population-standardized values used by the paper implementation."""
     values = values.float()
     mean = values.mean()
     std = values.std(unbiased=False).clamp_min(_EPS)
@@ -36,7 +35,6 @@ def disagreement_components(
     fp_logits: torch.Tensor,
     q_logits: torch.Tensor,
 ) -> DisagreementComponents:
-    """Compute the per-sample FP-vs-proxy disagreement signals used by ARCS."""
     fp_probs = F.softmax(fp_logits.float(), dim=1)
     q_probs = F.softmax(q_logits.float(), dim=1)
 
@@ -48,7 +46,6 @@ def disagreement_components(
     fp_margin = fp_top2[:, 0] - fp_top2[:, 1]
     q_margin = q_top2[:, 0] - q_top2[:, 1]
 
-    # One-sided degradation signals used by the selector score and severity.
     conf_gap = torch.clamp(fp_conf - q_conf, min=0.0)
     margin_gap = torch.clamp(fp_margin - q_margin, min=0.0)
 
@@ -81,7 +78,6 @@ def disagreement_score(
     kl_weight: float = 0.5,
     flip_bonus: float = 0.25,
 ) -> torch.Tensor:
-    """ARCS disagreement score R(x)."""
     return (
         zscore(components.conf_gap)
         + zscore(components.margin_gap)
@@ -94,14 +90,6 @@ def severity_score(
     components: DisagreementComponents,
     reference_percentile: float = 90.0,
 ) -> tuple[float, float, float]:
-    """Return the exact continuous severity used by the reproduction path.
-
-    The numerator uses the one-sided confidence degradation. The automatic
-    confidence reference intentionally uses the absolute FP-vs-proxy
-    confidence difference. Automatic references follow the original
-    implementation's NumPy percentile calculation and 1e-12 probability
-    floor for the reference KL computation.
-    """
     conf_reference_values = torch.abs(
         components.fp_conf - components.q_conf
     ).detach().cpu().numpy()
