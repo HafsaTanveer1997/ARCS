@@ -23,8 +23,6 @@ class SelectQResult:
 
 
 class SelectQSelector:
-    """SelectQ baseline used in the reported experiments."""
-
     def __init__(
         self,
         model: nn.Module,
