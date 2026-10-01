@@ -48,11 +48,6 @@ def extract_candidate_embeddings(
     seed: int,
     feature_module_name: str,
 ) -> tuple[torch.Tensor, list[int]]:
-    """Extract the paper's final pre-classifier representations.
-
-    The returned embeddings are intentionally not normalized here. Greedy
-    herding performs L2 normalization internally.
-    """
     rng = np.random.default_rng(int(seed))
     full_indices = np.arange(len(dataset))
 
@@ -101,10 +96,8 @@ def extract_candidate_embeddings(
 
             features = captured[0]
             if features.dim() == 4:
-                # CNN feature maps, including MobileNetV2 `features`.
                 features = F.adaptive_avg_pool2d(features, 1)
             elif features.dim() == 3:
-                # DeiT final norm output: token 0 is the CLS representation.
                 features = features[:, 0, :]
 
             features_all.append(features.flatten(1).detach().cpu().float())
@@ -128,4 +121,4 @@ def paper_feature_module(architecture: str) -> str:
     try:
         return modules[architecture]
     except KeyError as exc:
-        raise ValueError(f"Unsupported paper architecture: {architecture}") from exc
+        raise ValueError(f"Unsupported architecture: {architecture}") from exc
