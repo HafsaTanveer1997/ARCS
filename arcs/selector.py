@@ -24,8 +24,6 @@ class ARCSSelectionResult:
 
 
 class ARCSSelector:
-    """Paper configuration of ARCS calibration-data selection."""
-
     def __init__(
         self,
         *,
@@ -81,7 +79,6 @@ class ARCSSelector:
         candidate_positions: list[int],
         num_select: int,
     ) -> list[int]:
-        """Descending-score selection with first-pass FP-predicted-class cap."""
         if num_select <= 0 or not candidate_positions:
             return []
 
@@ -104,8 +101,6 @@ class ARCSSelector:
             if len(selected) >= num_select:
                 return selected
 
-        # If the cap prevents the branch from reaching its requested size,
-        # relax it and continue in descending-score order.
         selected_set = set(selected)
         for position in ordered_positions:
             if position not in selected_set:
@@ -159,7 +154,6 @@ class ARCSSelector:
             severity,
         )
 
-        # Nearest-integer branch sizes from the manuscript.
         n_rep = max(1, int(round(rep_ratio * target)))
         n_rel = max(0, int(round(reliability_ratio * target)))
         n_rand = target - n_rep - n_rel
@@ -174,13 +168,10 @@ class ARCSSelector:
             self.low_severity_band[1], self.high_severity_band[1], severity
         )
 
-        # 1. Representative branch via greedy herding on L2-normalized features.
         rep_positions = greedy_herding(embeddings, n_rep)
         selected = list(rep_positions)
         selected_set = set(selected)
 
-        # 2. Reliability branch. Percentiles are computed after representative
-        # samples are removed, exactly as described in the paper.
         remaining_positions = [
             position for position in range(pool_size)
             if position not in selected_set
@@ -196,8 +187,6 @@ class ARCSSelector:
                 low_percentile=low_band,
                 high_percentile=high_band,
             )
-
-            # Empty-band fallback: use the complete remaining pool.
             if not local_band:
                 local_band = list(range(len(remaining_positions)))
 
@@ -212,7 +201,6 @@ class ARCSSelector:
         selected.extend(rel_positions)
         selected_set.update(rel_positions)
 
-        # 3. Diversity branch: uniform random sampling without replacement.
         remaining_positions = [
             position for position in range(pool_size)
             if position not in selected_set
