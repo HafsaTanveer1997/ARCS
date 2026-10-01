@@ -1,0 +1,49 @@
+__pycache__/
+*.py[cod]
+*.so
+.ipynb_checkpoints/
+
+.venv/
+venv/
+env/
+
+.env
+.DS_Store
+
+# Datasets and checkpoints
+data/raw/
+datasets/
+pretrained/
+checkpoints/
+CKPT_DIR/
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.npy
+*.npz
+*.tar
+*.tar.gz
+*.zip
+
+# Generated outputs
+logs/
+runs/
+wandb/
+outputs/
+results/
+overhead_logs/
+
+# Generated evaluation artifacts
+test_logits_*.csv
+reliability_*.png
+confidence_hist_*.png
+trust_samples_*.csv
+results_*.csv
+*_selection_*.json
+last_command.txt
+
+# Local / cluster helper files
+slurm-*.out
+*.sbatch.local
+*.sh.local

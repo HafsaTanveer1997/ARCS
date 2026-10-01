@@ -1,0 +1,38 @@
+method: arcs
+candidate_pool_size: 4096
+proxy_calibration_size: 128
+proxy_calibration_batch_size: 32
+
+score:
+  confidence_gap_weight: 1.0
+  margin_gap_weight: 1.0
+  kl_weight: 0.5
+  flip_bonus: 0.25
+  zscore_unbiased: false
+  epsilon: 1.0e-8
+
+severity:
+  reference_percentile: 90
+  confidence_weight: 0.5
+  kl_weight: 0.5
+  flip_weight: 0.0
+  clip_min: 0.0
+  clip_max: 1.0
+
+allocation:
+  representative_ratio_low_severity: 0.75
+  representative_ratio_high_severity: 0.68
+  reliability_ratio_low_severity: 0.05
+  reliability_ratio_high_severity: 0.12
+  random_ratio: 0.20
+
+reliability_band:
+  low_severity_percentiles: [75, 95]
+  high_severity_percentiles: [70, 90]
+  score_scope: remaining
+  selection: descending_score
+  first_pass_class_cap: 2
+  class_label_source: fp_prediction
+  relax_class_cap_if_needed: true
+
+trusted_prediction_threshold: 0.70
