@@ -5,7 +5,6 @@ import torch.nn.functional as F
 
 
 def greedy_herding(embeddings: torch.Tensor, num_select: int) -> list[int]:
-    """Greedy mean-matching herding over L2-normalized embeddings."""
     x = F.normalize(embeddings.float(), dim=1)
     n = int(x.size(0))
     k = min(max(int(num_select), 0), n)
