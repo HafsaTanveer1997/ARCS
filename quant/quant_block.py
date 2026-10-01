@@ -1,6 +1,5 @@
 import torch.nn as nn
 
-from models.mnasnet import _InvertedResidual
 from models.mobilenetv2 import InvertedResidual
 from models.regnet import ResBottleneckBlock
 from models.resnet import BasicBlock, Bottleneck
@@ -141,35 +140,11 @@ class QuantInvertedResidual(BaseQuantBlock):
         return out
 
 
-class _QuantInvertedResidual(BaseQuantBlock):
-    def __init__(self, block: _InvertedResidual, weight_quant_params={}, act_quant_params={}):
-        super().__init__()
-        self.apply_residual = block.apply_residual
-        self.conv = nn.Sequential(
-            QuantModule(block.layers[0], weight_quant_params, act_quant_params),
-            QuantModule(block.layers[3], weight_quant_params, act_quant_params),
-            QuantModule(block.layers[6], weight_quant_params, act_quant_params, disable_act_quant=True),
-        )
-        self.conv[0].activation_function = nn.ReLU()
-        self.conv[0].norm_function = block.layers[1]
-        self.conv[1].activation_function = nn.ReLU()
-        self.conv[1].norm_function = block.layers[4]
-        self.conv[2].norm_function = block.layers[7]
-        self.act_quantizer = UniformAffineQuantizer(**act_quant_params)
-
-    def forward(self, x):
-        out = x + self.conv(x) if self.apply_residual else self.conv(x)
-        if self.use_act_quant:
-            out = self.act_quantizer(out)
-        return out
-
-
 specials = {
     BasicBlock: QuantBasicBlock,
     Bottleneck: QuantBottleneck,
     ResBottleneckBlock: QuantResBottleneckBlock,
     InvertedResidual: QuantInvertedResidual,
-    _InvertedResidual: _QuantInvertedResidual,
 }
 
 specials_unquantized = [nn.AdaptiveAvgPool2d, nn.MaxPool2d, nn.Dropout]
