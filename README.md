@@ -1,6 +1,6 @@
 # ARCS
 
-Code for ARCS calibration-data selection for low-bit post-training quantization.
+This is partial Code for ARCS calibration-data selection for low-bit post-training quantization. Complete code will be available upon acceptance of paper
 
 The repository contains the ARCS selector, the three comparison methods used in the paper, and a small ImageNet/PTQ runner. Result files and datasets are not included.
 
